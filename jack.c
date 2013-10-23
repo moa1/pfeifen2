@@ -1,6 +1,7 @@
 //gcc -g `pkg-config --libs --cflags jack` --std=c99 jack.c
 
 #include <jack/jack.h>
+#include <jack/midiport.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -9,6 +10,7 @@ jack_nframes_t jack_sample_rate = 0;
 jack_nframes_t jack_buffer_size = 0;
 jack_port_t *jack_audio_port = NULL;
 jack_port_t *jack_midi_port = NULL;
+jack_port_t *jack_midi_port_in = NULL;
 
 int jack_init() {
 	jack_status_t status;
@@ -20,14 +22,30 @@ int jack_init() {
 }
 
 int jack_process_callback(jack_nframes_t nframes, void *arg) {
-	printf("jack_process_callback nframes:%i\n", nframes);
-	if (jack_audio_port) {
+	//printf("jack_process_callback nframes:%i\n", nframes);
+/*	if (jack_audio_port) {
 		float *buf = jack_port_get_buffer(jack_audio_port, jack_buffer_size);
 		printf("buf:%p\n", buf);
 		for (int i=0; i<nframes; i++) {
 			printf("%f ", buf[i]);
 		}
 		printf("\n");
+	}
+*/	if (jack_midi_port_in) {
+		//printf("jack_process_callback nframes:%i port=jack_midi_port_in\n", nframes);
+		void *buf = jack_port_get_buffer(jack_midi_port_in, jack_buffer_size);
+		int n_events = jack_midi_get_event_count(buf);
+		//printf("n_events:%i\n", n_events);
+		for (int i=0; i<n_events; i++) {
+			jack_midi_event_t event;
+			jack_midi_event_get(&event, buf, i);
+			printf("time:%i size:%i ", event.time, event.size);
+			for (int j=0; j<event.size; j++) {
+				printf("buffer[%i]:%i ",j,event.buffer[j]);
+			}
+			printf("\n");
+		}
+		//printf("\n");
 	}
 	return 0;
 }
@@ -93,12 +111,15 @@ int main() {
 	
 	printf("jack_sample_rate:%i jack_buffer_size:%i\n", jack_sample_rate, jack_buffer_size);
 	
+	jack_midi_port_in = jack_port_register(jack_client, "midi input", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+	if (jack_midi_port_in == NULL) {perror("jack_port_register midi in port\n"); exit(1);}
+
 	jack_audio_port = jack_port_register(jack_client, "input", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
 	if (jack_audio_port == NULL) {perror("jack_port_register audio port\n"); exit(1);}
 
 	jack_midi_port = jack_port_register(jack_client, "output", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 	if (jack_midi_port == NULL) {perror("jack_port_register midi port\n"); exit(1);}
-	
+
 	while(1) {
 		jack_nframes_t nframes;
 		nframes = jack_cycle_wait(jack_client);
