@@ -1,5 +1,38 @@
 //gcc -g `pkg-config --libs --cflags jack` --std=c99 jack.c
 
+/*
+jack-keyboard press individual keys:
+time:125 size:3 buffer[0]:144 buffer[1]:90 buffer[2]:74 	note90 at volume 74
+time:120 size:3 buffer[0]:128 buffer[1]:90 buffer[2]:74 	NoteOff note90
+time:13 size:3 buffer[0]:144 buffer[1]:89 buffer[2]:74 		F-? at volume 74
+time:11 size:3 buffer[0]:128 buffer[1]:89 buffer[2]:74 		NoteOff F-?
+time:55 size:3 buffer[0]:144 buffer[1]:89 buffer[2]:1 		F-? at volume 1
+time:39 size:3 buffer[0]:128 buffer[1]:89 buffer[2]:1 
+time:48 size:3 buffer[0]:144 buffer[1]:60 buffer[2]:127		C-5 at volume 127
+time:32 size:3 buffer[0]:128 buffer[1]:60 buffer[2]:0 		NoteOff C-5
+time:32 size:3 buffer[0]:144 buffer[1]:61 buffer[2]:127 	C#5 at volume 127
+time:16 size:3 buffer[0]:128 buffer[1]:61 buffer[2]:0 		NoteOff C#5
+jack-keyboard increase Program from 0 to 1:					gmidimonitor says:
+time:75 size:3 buffer[0]:176 buffer[1]:32 buffer[2]:0 		CC Bank selection (LSB) (32), value 0
+time:75 size:3 buffer[0]:176 buffer[1]:0 buffer[2]:0 		CC Bank selection (0), value 0
+time:76 size:2 buffer[0]:192 buffer[1]:1 					Program change, 1 (Bright Acoustic Piano)
+jack-keyboard increase Bank from 0 to 1:
+time:83 size:3 buffer[0]:176 buffer[1]:32 buffer[2]:1 		CC Bank selection (LSB) (32), value 1
+time:84 size:3 buffer[0]:176 buffer[1]:0 buffer[2]:0 		CC Bank selection (0), value 0
+time:84 size:2 buffer[0]:192 buffer[1]:0 					Program change, 0 (Accoustic Grand Piano)
+connect VMPK using a2jmidid to gmidimonitor and pfeifen:
+VMPK put Bender slider to full right:						gmidimonitor
+time:45 size:3 buffer[0]:224 buffer[1]:127 buffer[2]:127 	Pitchwheel, 8191
+time:81 size:3 buffer[0]:224 buffer[1]:0 buffer[2]:64 		Pitchwheel, 0
+VMPK put Bender slider slightly to the left:
+time:92 size:3 buffer[0]:224 buffer[1]:36 buffer[2]:63 		Pitchwheel, -92
+time:18 size:3 buffer[0]:224 buffer[1]:0 buffer[2]:64 		Pitchwheel, 0
+VMPK set Control-7 Volume to approx. middle
+time:45 size:3 buffer[0]:176 buffer[1]:7 buffer[2]:63 		CC Main volume (7), value 63
+time:69 size:3 buffer[0]:176 buffer[1]:7 buffer[2]:65 		CC Main volume (7), value 65
+time:25 size:3 buffer[0]:176 buffer[1]:7 buffer[2]:67 		CC Main volume (7), value 67
+*/
+
 #include <jack/jack.h>
 #include <jack/midiport.h>
 #include <stdio.h>
