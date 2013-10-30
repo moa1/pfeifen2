@@ -2,15 +2,15 @@
 
 /*
 jack-keyboard press individual keys:
-time:125 size:3 buffer[0]:144 buffer[1]:90 buffer[2]:74 	note90 at volume 74
+time:125 size:3 buffer[0]:144 buffer[1]:90 buffer[2]:74 	note90 at velocity 74
 time:120 size:3 buffer[0]:128 buffer[1]:90 buffer[2]:74 	NoteOff note90
-time:13 size:3 buffer[0]:144 buffer[1]:89 buffer[2]:74 		F-? at volume 74
+time:13 size:3 buffer[0]:144 buffer[1]:89 buffer[2]:74 		F-? at velocity 74
 time:11 size:3 buffer[0]:128 buffer[1]:89 buffer[2]:74 		NoteOff F-?
-time:55 size:3 buffer[0]:144 buffer[1]:89 buffer[2]:1 		F-? at volume 1
+time:55 size:3 buffer[0]:144 buffer[1]:89 buffer[2]:1 		F-? at velocity 1
 time:39 size:3 buffer[0]:128 buffer[1]:89 buffer[2]:1 
-time:48 size:3 buffer[0]:144 buffer[1]:60 buffer[2]:127		C-5 at volume 127
+time:48 size:3 buffer[0]:144 buffer[1]:60 buffer[2]:127		C-5 at velocity 127
 time:32 size:3 buffer[0]:128 buffer[1]:60 buffer[2]:0 		NoteOff C-5
-time:32 size:3 buffer[0]:144 buffer[1]:61 buffer[2]:127 	C#5 at volume 127
+time:32 size:3 buffer[0]:144 buffer[1]:61 buffer[2]:127 	C#5 at velocity 127
 time:16 size:3 buffer[0]:128 buffer[1]:61 buffer[2]:0 		NoteOff C#5
 jack-keyboard increase Program from 0 to 1:					gmidimonitor says:
 time:75 size:3 buffer[0]:176 buffer[1]:32 buffer[2]:0 		CC Bank selection (LSB) (32), value 0
@@ -31,6 +31,14 @@ VMPK set Control-7 Volume to approx. middle
 time:45 size:3 buffer[0]:176 buffer[1]:7 buffer[2]:63 		CC Main volume (7), value 63
 time:69 size:3 buffer[0]:176 buffer[1]:7 buffer[2]:65 		CC Main volume (7), value 65
 time:25 size:3 buffer[0]:176 buffer[1]:7 buffer[2]:67 		CC Main volume (7), value 67
+
+whistling should emit the following MIDI Commands:
+CC Main volume according to whistled volume.
+Note On at predefined (constant?) velocity.
+while whisling goes on:
+	set CC Main volume according to whistling volume
+	set Pitchwheel according to whistling pitch.
+Note Off when whistling stops.
 */
 
 #include <jack/jack.h>
@@ -113,14 +121,15 @@ int jack_setup_and_activate() {
 	int jack_set_latency_callback (jack_client_t *client,
                                JackLatencyCallback latency_callback,
                                void *)
-    */
+	*/
 
+	// before activating, set variables we need to know.
+	jack_sample_rate = jack_get_sample_rate(jack_client);
+	jack_buffer_size = jack_get_buffer_size(jack_client);
+	
 	// now that all the callbacks have been registered, we can activate.
 	ret = jack_activate(jack_client);
 	if (ret) {perror("jack_activate"); exit(1);}
-	
-	jack_sample_rate = jack_get_sample_rate(jack_client);
-	jack_buffer_size = jack_get_buffer_size(jack_client);
 	
 	return 0;
 }
