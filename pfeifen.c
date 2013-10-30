@@ -1,5 +1,3 @@
-//gcc -g `pkg-config --libs --cflags jack` --std=c99 jack.c
-
 /*
 jack-keyboard press individual keys:
 time:125 size:3 buffer[0]:144 buffer[1]:90 buffer[2]:74 	note90 at velocity 74
@@ -45,6 +43,7 @@ Note Off when whistling stops.
 #include <jack/midiport.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "converter.h"
 
 jack_client_t *jack_client = NULL;
 jack_nframes_t jack_sample_rate = 0;
@@ -52,6 +51,8 @@ jack_nframes_t jack_buffer_size = 0;
 jack_port_t *jack_audio_port = NULL;
 jack_port_t *jack_midi_port = NULL;
 jack_port_t *jack_midi_port_in = NULL;
+
+audio_midi_converter* converter = NULL;
 
 int jack_init() {
 	jack_status_t status;
@@ -64,29 +65,9 @@ int jack_init() {
 
 int jack_process_callback(jack_nframes_t nframes, void *arg) {
 	//printf("jack_process_callback nframes:%i\n", nframes);
-/*	if (jack_audio_port) {
+	if (jack_audio_port) {
 		float *buf = jack_port_get_buffer(jack_audio_port, jack_buffer_size);
-		printf("buf:%p\n", buf);
-		for (int i=0; i<nframes; i++) {
-			printf("%f ", buf[i]);
-		}
-		printf("\n");
-	}
-*/	if (jack_midi_port_in) {
-		//printf("jack_process_callback nframes:%i port=jack_midi_port_in\n", nframes);
-		void *buf = jack_port_get_buffer(jack_midi_port_in, jack_buffer_size);
-		int n_events = jack_midi_get_event_count(buf);
-		//printf("n_events:%i\n", n_events);
-		for (int i=0; i<n_events; i++) {
-			jack_midi_event_t event;
-			jack_midi_event_get(&event, buf, i);
-			printf("time:%i size:%i ", event.time, event.size);
-			for (int j=0; j<event.size; j++) {
-				printf("buffer[%i]:%i ",j,event.buffer[j]);
-			}
-			printf("\n");
-		}
-		//printf("\n");
+		audio_midi_converter_process(converter, nframes, buf);
 	}
 	return 0;
 }
@@ -145,13 +126,18 @@ int jack_close() {
 }
 
 int main() {
-	jack_init();
+	if (jack_init()) {
+		perror("jack_init");
+		exit(1);
+	}
 	if (jack_setup_and_activate()) {
 		perror("jack_setup_and_activate");
 		exit(1);
 	}
 	
 	printf("jack_sample_rate:%i jack_buffer_size:%i\n", jack_sample_rate, jack_buffer_size);
+
+	converter = audio_midi_converter_init(jack_sample_rate, 80.0, 2500.0, 4800.0);
 	
 	jack_midi_port_in = jack_port_register(jack_client, "midi input", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
 	if (jack_midi_port_in == NULL) {perror("jack_port_register midi in port\n"); exit(1);}
@@ -173,6 +159,8 @@ int main() {
 	if (!ret) {perror("jack_port_unregister");exit(1);}
 	ret = jack_port_unregister (jack_client, jack_midi_port);
 	if (!ret) {perror("jack_port_unregister");exit(1);}
+	
+	// converter_free(converter);
 	
 	jack_close();
 }
