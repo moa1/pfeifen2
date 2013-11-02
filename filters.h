@@ -35,7 +35,7 @@ typedef struct zerocrossingdetector_filter_t {
 	int lastupcrossing;
 } zerocrossingdetector_filter;
 
-zerocrossingdetector_filter* zerocrossingdetector_filter_init(int samplerate);
+zerocrossingdetector_filter* zerocrossingdetector_filter_init(float samplerate);
 float zerocrossingdetector_filter_next(zerocrossingdetector_filter* f, float x);
 
 
@@ -49,4 +49,15 @@ typedef struct amplitudedetector_filter_t {
 
 amplitudedetector_filter* amplitudedetector_filter_init();
 float amplitudedetector_filter_next(amplitudedetector_filter* f, float x);
+
+
+typedef struct windowfunction_filter_t {
+	int maxwindowlen;
+	int windowlen;
+	float* window;
+	float (*function)(int, float *);
+} windowfunction_filter;
+
+windowfunction_filter* windowfunction_filter_init(float seconds, float samplerate, float (*function)(int, float*));
+float windowfunction_filter_next(windowfunction_filter* f, float x);
 

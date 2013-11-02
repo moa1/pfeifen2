@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include "filters.h"
 
 // An in-place low-pass filter with cutoff frequency CUTOFF for the samples SAMPLES sampled at sample rate SAMPLERATE.
@@ -62,7 +63,7 @@ float automaticgain_filter_next(automaticgain_filter* f, float x) {
 	return y;
 }
 
-zerocrossingdetector_filter* zerocrossingdetector_filter_init(int samplerate) {
+zerocrossingdetector_filter* zerocrossingdetector_filter_init(float samplerate) {
 	zerocrossingdetector_filter* f = malloc(sizeof(zerocrossingdetector_filter));
 	f->samplerate = samplerate;
 	f->lastx = 0.0;
@@ -108,5 +109,24 @@ float amplitudedetector_filter_next(amplitudedetector_filter* f, float x) {
 	f->lastx = x;
 	return f->ampl;
 	//return the maximum of the last 0.05 (0.01?) seconds of f->ampl.
+}
+
+windowfunction_filter* windowfunction_filter_init(float seconds, float samplerate, float (*function)(int, float*)) {
+	windowfunction_filter* f = malloc(sizeof(windowfunction_filter));
+	f->maxwindowlen = (int)ceil(seconds * samplerate);
+	f->windowlen = 0;
+	f->window = (float*)malloc(sizeof(float)*f->maxwindowlen);
+	f->function = function;
+	return f;
+}
+
+float windowfunction_filter_next(windowfunction_filter* f, float x) {
+	if (f->windowlen >= f->maxwindowlen) {
+		memmove(&f->window[0], &f->window[1], sizeof(float)*(f->windowlen-1));
+	}
+	f->window[f->windowlen] = x;
+	f->windowlen++;
+	float y = (f->function)(f->windowlen, f->window);
+	return y;
 }
 

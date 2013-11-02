@@ -18,7 +18,7 @@ jack-keyboard increase Bank from 0 to 1:
 time:83 size:3 buffer[0]:176 buffer[1]:32 buffer[2]:1 		CC Bank selection (LSB) (32), value 1
 time:84 size:3 buffer[0]:176 buffer[1]:0 buffer[2]:0 		CC Bank selection (0), value 0
 time:84 size:2 buffer[0]:192 buffer[1]:0 					Program change, 0 (Accoustic Grand Piano)
-connect VMPK using a2jmidid to gmidimonitor and pfeifen:
+connect VMPK using a2jmidid to gmidimonitor and midi_in_decode:
 VMPK put Bender slider to full right:						gmidimonitor
 time:45 size:3 buffer[0]:224 buffer[1]:127 buffer[2]:127 	Pitchwheel, 8191
 time:81 size:3 buffer[0]:224 buffer[1]:0 buffer[2]:64 		Pitchwheel, 0
@@ -48,11 +48,15 @@ Note Off when whistling stops.
 jack_client_t *jack_client = NULL;
 jack_nframes_t jack_sample_rate = 0;
 jack_nframes_t jack_buffer_size = 0;
-jack_port_t *jack_audio_port = NULL;
-jack_port_t *jack_midi_port = NULL;
-jack_port_t *jack_midi_port_in = NULL;
+jack_port_t *jack_audio_in_port = NULL;
+jack_port_t *jack_midi_out_port = NULL;
+jack_port_t *jack_midi_in_port = NULL;
 
 audio_midi_converter* converter = NULL;
+
+typedef struct jack_midi_event_info_t {
+	void *port_buffer;
+} jack_midi_event_info;
 
 int jack_init() {
 	jack_status_t status;
@@ -65,9 +69,12 @@ int jack_init() {
 
 int jack_process_callback(jack_nframes_t nframes, void *arg) {
 	//printf("jack_process_callback nframes:%i\n", nframes);
-	if (jack_audio_port) {
-		float *buf = jack_port_get_buffer(jack_audio_port, jack_buffer_size);
-		audio_midi_converter_process(converter, nframes, buf);
+	if (jack_audio_in_port) {
+		float *audio_buf = jack_port_get_buffer(jack_audio_in_port, jack_buffer_size);
+		unsigned char *midi_out_buf = jack_port_get_buffer(jack_midi_out_port, jack_buffer_size);
+		jack_midi_event_info info;
+		info.port_buffer = midi_out_buf;
+		audio_midi_converter_process(converter, nframes, audio_buf, &info);
 	}
 	return 0;
 }
@@ -125,6 +132,75 @@ int jack_close() {
 	return ret;
 }
 
+int jack_midi_note_on(void* info, int time, unsigned char pitch, unsigned char velocity) {
+	jack_midi_event_info* i = (jack_midi_event_info*) info;
+	
+	jack_midi_data_t buffer[3];
+	buffer[0] = 144;
+	buffer[1] = pitch;
+	buffer[2] = velocity;
+
+	jack_midi_event_t event;
+	event.time = time;
+	event.size = 3;
+	event.buffer = buffer;
+
+	return jack_midi_event_write(i->port_buffer, time, (const jack_midi_data_t *) &event, 3);
+}
+
+int jack_midi_note_off(void* info, int time, unsigned char pitch) {
+	jack_midi_event_info* i = (jack_midi_event_info*) info;
+	
+	jack_midi_data_t buffer[3];
+	buffer[0] = 128;
+	buffer[1] = pitch;
+	buffer[2] = 0;
+
+	jack_midi_event_t event;
+	event.time = time;
+	event.size = 3;
+	event.buffer = buffer;
+
+	return jack_midi_event_write(i->port_buffer, time, (const jack_midi_data_t *) &event, 3);
+}
+
+int jack_midi_pitchbend(void* info, int time, short pitchbend) {
+	jack_midi_event_info* i = (jack_midi_event_info*) info;
+	
+	// pitchbend is from -8192 to 8191.
+	if (pitchbend < -8192 || pitchbend > 8191) {
+		printf("pitchbend out of range:%i\n", pitchbend);
+		pitchbend = 0;
+	}
+	jack_midi_data_t buffer[3];
+	buffer[0] = 224;
+	buffer[1] = (pitchbend + 8192) & 0x7f;
+	buffer[2] = (pitchbend + 8192) >> 7;
+
+	jack_midi_event_t event;
+	event.time = time;
+	event.size = 3;
+	event.buffer = buffer;
+
+	return jack_midi_event_write(i->port_buffer, time, (const jack_midi_data_t *) &event, 3);
+}
+
+int jack_midi_mainvolume(void* info, int time, unsigned char volume) {
+	jack_midi_event_info* i = (jack_midi_event_info*) info;
+	
+	jack_midi_data_t buffer[3];
+	buffer[0] = 176;
+	buffer[1] = 7;
+	buffer[2] = volume;
+
+	jack_midi_event_t event;
+	event.time = time;
+	event.size = 3;
+	event.buffer = buffer;
+
+	return jack_midi_event_write(i->port_buffer, time, (const jack_midi_data_t *) &event, 3);
+}
+
 int main() {
 	if (jack_init()) {
 		perror("jack_init");
@@ -136,17 +212,22 @@ int main() {
 	}
 	
 	printf("jack_sample_rate:%i jack_buffer_size:%i\n", jack_sample_rate, jack_buffer_size);
-
-	converter = audio_midi_converter_init(jack_sample_rate, 80.0, 2500.0, 4800.0);
 	
-	jack_midi_port_in = jack_port_register(jack_client, "midi input", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
-	if (jack_midi_port_in == NULL) {perror("jack_port_register midi in port\n"); exit(1);}
+	int (*midi_note_on) (void* info, int time, unsigned char pitch, unsigned char velocity) = &jack_midi_note_on;
+	int (*midi_note_off) (void* info, int time, unsigned char pitch) = &jack_midi_note_off;
+	int (*midi_pitchbend) (void* info, int time, short pitchbend) = &jack_midi_pitchbend;
+	int (*midi_mainvolume) (void* info, int time, unsigned char volume) = &jack_midi_mainvolume;
+	
+	converter = audio_midi_converter_init(midi_note_on, midi_note_off, midi_pitchbend, midi_mainvolume, jack_sample_rate, 80.0, 2500.0, 4800.0, 0.005, 50.0, 0.002);
+	
+	jack_midi_in_port = jack_port_register(jack_client, "midi input", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+	if (jack_midi_in_port == NULL) {perror("jack_port_register midi in port\n"); exit(1);}
 
-	jack_audio_port = jack_port_register(jack_client, "input", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
-	if (jack_audio_port == NULL) {perror("jack_port_register audio port\n"); exit(1);}
+	jack_audio_in_port = jack_port_register(jack_client, "input", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+	if (jack_audio_in_port == NULL) {perror("jack_port_register audio port\n"); exit(1);}
 
-	jack_midi_port = jack_port_register(jack_client, "output", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
-	if (jack_midi_port == NULL) {perror("jack_port_register midi port\n"); exit(1);}
+	jack_midi_out_port = jack_port_register(jack_client, "output", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+	if (jack_midi_out_port == NULL) {perror("jack_port_register midi port\n"); exit(1);}
 
 	while(1) {
 		jack_nframes_t nframes;
@@ -155,9 +236,11 @@ int main() {
 	}
 	
 	int ret;
-	ret = jack_port_unregister (jack_client, jack_audio_port);
+	ret = jack_port_unregister (jack_client, jack_audio_in_port);
 	if (!ret) {perror("jack_port_unregister");exit(1);}
-	ret = jack_port_unregister (jack_client, jack_midi_port);
+	ret = jack_port_unregister (jack_client, jack_midi_out_port);
+	if (!ret) {perror("jack_port_unregister");exit(1);}
+	ret = jack_port_unregister (jack_client, jack_midi_in_port);
 	if (!ret) {perror("jack_port_unregister");exit(1);}
 	
 	// converter_free(converter);
