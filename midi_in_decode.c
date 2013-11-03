@@ -39,9 +39,9 @@ int jack_process_callback(jack_nframes_t nframes, void *arg) {
 		for (int i=0; i<n_events; i++) {
 			jack_midi_event_t event;
 			jack_midi_event_get(&event, buf, i);
-			printf("time:%i size:%i ", event.time, event.size);
+			printf("time:%3i size:%i ", event.time, event.size);
 			for (int j=0; j<event.size; j++) {
-				printf("buffer[%i]:%i ",j,event.buffer[j]);
+				printf("buffer[%i]:0x%2x(=%3i) ",j,event.buffer[j],event.buffer[j]);
 			}
 			printf("\n");
 		}
@@ -123,7 +123,7 @@ int main() {
 	while(1) {
 		jack_nframes_t nframes;
 		nframes = jack_cycle_wait(jack_client);
-		printf("jack_cycle_wait nframes:%i\n", nframes);
+		//printf("jack_cycle_wait nframes:%i\n", nframes);
 	}
 	
 	int ret;
