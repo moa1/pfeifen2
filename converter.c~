@@ -27,7 +27,6 @@ audio_midi_converter* audio_midi_converter_init(
 	int (*midi_note_off) (void* info, int time, unsigned char pitch),
 	int (*midi_pitchbend)(void* info, int time, short pitchbend),
 	int (*midi_mainvolume)(void* info, int time, unsigned char volume),
-	int (*midi_programchange)(void* info, int time, unsigned char program),
 	float samplerate, float filter_min_freq, float filter_max_freq, float gain, float seconds_maxdelay, float out_freq_max_change, float ampl_noteon)
 {
 
@@ -76,7 +75,6 @@ audio_midi_converter* audio_midi_converter_init(
 	c->midi_note_off = midi_note_off;
 	c->midi_pitchbend = midi_pitchbend;
 	c->midi_mainvolume = midi_mainvolume;
-	c->midi_programchange = midi_programchange;
 }
 
 float loghnf(float x) {
@@ -153,10 +151,9 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 			
 			printf("NOTE ON. freq=%f pitch:%i pitchbend=%i\n", freq, pitch, pitchbend);
 			
-			(c->midi_programchange)(midi_player_info, i, 71);
 			(c->midi_note_on)(midi_player_info, i, c->last_note_pitch, c->last_note_velocity);
-			(c->midi_pitchbend)(midi_player_info, i, c->last_note_pitchbend);
-			(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
+			//(c->midi_pitchbend)(midi_player_info, i, c->last_note_pitchbend);
+			//(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
 		} else if (c->ampl_last >= c->ampl_noteon && amplmax < c->ampl_noteon && c->note_on==1) {
 			printf("time:%i note off, pitch:%i\n", i, c->last_note_pitch);
 			(c->midi_note_off)(midi_player_info, i, c->last_note_pitch);
@@ -166,16 +163,6 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 			c->last_note_pitchbend = -1;
 			c->last_note_velocity = -1;
 			c->last_note_volume = -1;
-		} else if (c->note_on == 1) {
-			int pitch;
-			int pitchbend;
-			freq_to_midi_pitch(freq, &pitch, &pitchbend, c->pitchbend_abs_range_in_half_notes);
-			int volume = (float)amplmax / 0.15 * 127;
-			
-			c->last_note_pitchbend = pitchbend;
-			(c->midi_pitchbend)(midi_player_info, i, c->last_note_pitchbend);
-			c->last_note_volume = volume;
-			(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
 		}
 
 		buffer_input_raw[i] = x;

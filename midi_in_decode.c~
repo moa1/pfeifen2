@@ -41,7 +41,7 @@ int jack_process_callback(jack_nframes_t nframes, void *arg) {
 			jack_midi_event_get(&event, buf, i);
 			printf("time:%3i size:%i ", event.time, event.size);
 			for (int j=0; j<event.size; j++) {
-				printf("buffer[%i]:0x%2x(=%3i) ",j,event.buffer[j],event.buffer[j]);
+				printf("buffer[%i]:0x%x(=%3i) ",j,event.buffer[j],event.buffer[j]);
 			}
 			printf("\n");
 		}

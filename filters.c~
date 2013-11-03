@@ -79,7 +79,7 @@ zerocrossingdetector_filter* zerocrossingdetector_filter_init(float samplerate) 
 
 float zerocrossingdetector_filter_next(zerocrossingdetector_filter* f, float x) {
 	float y = f->lastfreq;
-//	printf("zcd_filter_next f:%p f->lastx:%f x:%f f->lastupcrossing:%i\n", f, f->lastx, x, f->lastupcrossing);
+	printf("zcd_filter_next f:%p f->lastx:%f x:%f f->lastupcrossing:%i\n", f, f->lastx, x, f->lastupcrossing);
 	if (f->lastx < 0.0 && x >= 0.0) {
 		y = f->samplerate / f->lastupcrossing;
 		f->lastupcrossing = 0;
