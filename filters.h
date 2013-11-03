@@ -33,6 +33,7 @@ typedef struct zerocrossingdetector_filter_t {
 	float samplerate;
 	float lastx;
 	int lastupcrossing;
+	float lastfreq;
 } zerocrossingdetector_filter;
 
 zerocrossingdetector_filter* zerocrossingdetector_filter_init(float samplerate);
@@ -60,4 +61,11 @@ typedef struct windowfunction_filter_t {
 
 windowfunction_filter* windowfunction_filter_init(float seconds, float samplerate, float (*function)(int, float*));
 float windowfunction_filter_next(windowfunction_filter* f, float x);
+
+
+typedef struct writer_filter_t {
+	int handle;
+} writer_filter;
+writer_filter* writer_filter_init(const char* filename);
+float writer_filter_next(writer_filter* f, float x);
 

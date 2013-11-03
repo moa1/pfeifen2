@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
 #include "filters.h"
 
 // An in-place low-pass filter with cutoff frequency CUTOFF for the samples SAMPLES sampled at sample rate SAMPLERATE.
@@ -44,7 +49,7 @@ inline float highpass_rc_filter_next(highpass_rc_filter* f, float x) {
 automaticgain_filter* automaticgain_filter_init(float gain, float samplerate) {
 	automaticgain_filter* f = malloc(sizeof(automaticgain_filter));
 	f->a = 0.0;
-	f->a = gain/samplerate;
+	f->gain = gain/samplerate;
 	return f;
 }
 
@@ -68,13 +73,17 @@ zerocrossingdetector_filter* zerocrossingdetector_filter_init(float samplerate) 
 	f->samplerate = samplerate;
 	f->lastx = 0.0;
 	f->lastupcrossing = 1;
+	f->lastfreq = samplerate;
+	return f;
 }
 
 float zerocrossingdetector_filter_next(zerocrossingdetector_filter* f, float x) {
-	float y = -1.0;
-	if (f->lastx < 0 && x >= 0) {
+	float y = f->lastfreq;
+//	printf("zcd_filter_next f:%p f->lastx:%f x:%f f->lastupcrossing:%i\n", f, f->lastx, x, f->lastupcrossing);
+	if (f->lastx < 0.0 && x >= 0.0) {
 		y = f->samplerate / f->lastupcrossing;
 		f->lastupcrossing = 0;
+		f->lastfreq = y;
 	}
 	f->lastx = x;
 	f->lastupcrossing += 1;
@@ -123,10 +132,27 @@ windowfunction_filter* windowfunction_filter_init(float seconds, float samplerat
 float windowfunction_filter_next(windowfunction_filter* f, float x) {
 	if (f->windowlen >= f->maxwindowlen) {
 		memmove(&f->window[0], &f->window[1], sizeof(float)*(f->windowlen-1));
+		f->windowlen--;
 	}
 	f->window[f->windowlen] = x;
 	f->windowlen++;
 	float y = (f->function)(f->windowlen, f->window);
 	return y;
+}
+
+writer_filter* writer_filter_init(const char* filename) {
+	writer_filter* f = malloc(sizeof(writer_filter));
+	
+	int handle = open(filename, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
+	if (handle == -1) {
+		fprintf(stderr,"filename=%s\n",filename);
+		perror("cannot open file");
+		exit(1);
+	}
+	
+	f-> handle = handle;
+}
+float writer_filter_next(writer_filter* f, float x) {
+	write(f->handle, &x, sizeof(float));
 }
 
