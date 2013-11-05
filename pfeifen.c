@@ -143,7 +143,7 @@ int jack_close() {
 int jack_midi_note_on(void* info, int time, unsigned char pitch, unsigned char velocity) {
 	jack_midi_event_info* i = (jack_midi_event_info*) info;
 	
-	printf("jack_midi_note_on time=%i pitch=%i velocity=%i\n", time, pitch, velocity);
+//	printf("jack_midi_note_on time=%i pitch=%i velocity=%i\n", time, pitch, velocity);
 	
 	jack_midi_data_t buffer[3];
 	buffer[0] = 0x90;
@@ -157,7 +157,7 @@ int jack_midi_note_on(void* info, int time, unsigned char pitch, unsigned char v
 int jack_midi_note_off(void* info, int time, unsigned char pitch) {
 	jack_midi_event_info* i = (jack_midi_event_info*) info;
 	
-	printf("jack_midi_note_off time=%i pitch=%i\n", time, pitch);
+//	printf("jack_midi_note_off time=%i pitch=%i\n", time, pitch);
 
 	jack_midi_data_t buffer[3];
 	buffer[0] = 0x80;
@@ -173,7 +173,7 @@ int jack_midi_pitchbend(void* info, int time, short pitchbend) {
 	// pitchbend is from -8192 to 8191.
 	if (pitchbend < -8192 || pitchbend > 8191) {
 		printf("pitchbend out of range:%i\n", pitchbend);
-		pitchbend = 0;
+		exit(1);
 	}
 	jack_midi_data_t buffer[3];
 	buffer[0] = 0xe0;

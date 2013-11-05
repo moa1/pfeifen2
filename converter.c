@@ -185,7 +185,8 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 			int volume = (int)(amplmax / 0.15 * 127);
 			
 			if (pitchbend >= -8192 && pitchbend <= 8191) {
-				if (abs(pitchbend - c->last_note_pitchbend) > 100) {
+				if (abs(pitchbend - c->last_note_pitchbend) > 200) {
+					printf("Pitchbend change. freq=%f pitch:%i\n", freq, pitchbend);
 					c->last_note_pitchbend = pitchbend;
 					(c->midi_pitchbend)(midi_player_info, i, c->last_note_pitchbend);
 					c->last_note_duration = 0;
@@ -204,6 +205,7 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 				c->last_note_duration = 0;
 			}
 			if (abs(volume - c->last_note_volume) > 10) {
+				printf("Volume change. amplmax=%f\n", amplmax);
 				c->last_note_volume = volume;
 				(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
 				c->last_note_duration = 0;
