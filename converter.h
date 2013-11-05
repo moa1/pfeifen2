@@ -25,13 +25,16 @@ typedef struct audio_midi_converter_t {
 	float ampl_last;
 	float ampl_noteon;
 	
-	int pitchbend_abs_range_in_half_notes;
+	int midi_program;
+	
+	int pitchbend_abs_range_in_half_notes;	//how many half notes between lowest and highest pitchbend?
 
 	char note_on;
 	int last_note_pitch;
 	int last_note_pitchbend;
 	int last_note_velocity;
 	int last_note_volume;
+	int last_note_duration;	//ticks since last command
 	
 	int (*midi_note_on) (void* info, int time, unsigned char pitch, unsigned char velocity);
 	int (*midi_note_off) (void* info, int time, unsigned char pitch);
