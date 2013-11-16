@@ -28,7 +28,7 @@ audio_midi_converter* audio_midi_converter_init(
 	int (*midi_pitchbend)(void* info, int time, short pitchbend),
 	int (*midi_mainvolume)(void* info, int time, unsigned char volume),
 	int (*midi_programchange)(void* info, int time, unsigned char program),
-	float samplerate, float filter_min_freq, float filter_max_freq, float gain, float seconds_maxdelay, float out_freq_max_change, float ampl_noteon)
+	float samplerate, float filter_min_freq, float filter_max_freq, float gain, float seconds_maxdelay, float notechange_mindelay, float out_freq_max_change, float ampl_noteon)
 {
 
 
@@ -63,6 +63,7 @@ audio_midi_converter* audio_midi_converter_init(
 	
 	c->ampl_last = 0.0;
 	c->ampl_noteon = ampl_noteon;
+	c->notechange_mindelay = (int)ceil(notechange_mindelay * samplerate);
 	
 	c->midi_program = 71;
 	
@@ -165,11 +166,11 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 			
 			printf("NOTE ON. amplmax=%f freq=%f pitch:%i pitchbend=%i\n", amplmax, freq, pitch, pitchbend);
 			
-			(c->midi_programchange)(midi_player_info, i, c->midi_program);
+			//(c->midi_programchange)(midi_player_info, i, c->midi_program);
 			(c->midi_note_on)(midi_player_info, i, c->last_note_pitch, c->last_note_velocity);
 			(c->midi_pitchbend)(midi_player_info, i, c->last_note_pitchbend);
-			(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
-		} else if (c->ampl_last >= c->ampl_noteon && amplmax < c->ampl_noteon && c->note_on==1) {
+			//(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
+		} else if (c->ampl_last >= c->ampl_noteon && amplmax < c->ampl_noteon && c->note_on==1 && c->last_note_duration >= c->notechange_mindelay) {
 			printf("NOTE OFF. amplmax=%f pitch:%i\n", amplmax, c->last_note_pitch);
 			(c->midi_note_off)(midi_player_info, i, c->last_note_pitch);
 			
@@ -179,7 +180,7 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 			c->last_note_velocity = -1;
 			c->last_note_volume = -1;
 			c->last_note_duration = 0;
-		} else if (c->note_on == 1) {
+		} else if (c->note_on == 1 && c->last_note_duration >= c->notechange_mindelay) {
 			float hnfmp0 = freq_to_hnfmp0(freq);
 			int pitchbend = hnfmp0_and_pitch_to_midi_pitchbend(hnfmp0, c->last_note_pitch, c->pitchbend_abs_range_in_half_notes);
 			int volume = (int)(amplmax / 0.15 * 127);
@@ -192,22 +193,17 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 					c->last_note_duration = 0;
 				}
 			} else {
+				printf("NOTE CHANGE (NOTE OFF for now). pitch=%i\n", c->last_note_pitch);
 				(c->midi_note_off)(midi_player_info, i, c->last_note_pitch);
-				int pitch = hnfmp0_to_midi_pitch(hnfmp0);
-				int pitchbend = hnfmp0_and_pitch_to_midi_pitchbend(hnfmp0, pitch, c->pitchbend_abs_range_in_half_notes);
-				printf("NOTE CHANGE. freq=%f oldpitch:%i pitch:%i pitchbend=%i\n", freq, c->last_note_pitch, pitch, pitchbend);
-				c->last_note_pitch = pitch;
-				c->last_note_pitchbend = pitchbend;
-				c->last_note_velocity = 63; //TODO: ampl derivative is velocity
-				(c->midi_programchange)(midi_player_info, i, c->midi_program);
-				(c->midi_note_on)(midi_player_info, i, c->last_note_pitch, c->last_note_velocity);
-				(c->midi_pitchbend)(midi_player_info, i, c->last_note_pitchbend);
+				// allow note on in the next frame.
+				amplmax = 0.0;
+				c->note_on = 0;
 				c->last_note_duration = 0;
 			}
 			if (abs(volume - c->last_note_volume) > 10) {
 				printf("Volume change. amplmax=%f\n", amplmax);
 				c->last_note_volume = volume;
-				(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
+				//(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
 				c->last_note_duration = 0;
 			}
 		}

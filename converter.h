@@ -24,6 +24,7 @@ typedef struct audio_midi_converter_t {
 	
 	float ampl_last;
 	float ampl_noteon;
+	int notechange_mindelay;
 	
 	int midi_program;
 	
@@ -46,9 +47,10 @@ typedef struct audio_midi_converter_t {
 audio_midi_converter* audio_midi_converter_init(
 	int (*midi_note_on) (void* info, int time, unsigned char pitch, unsigned char velocity),
 	int (*midi_note_off) (void* info, int time, unsigned char pitch),
-	int (*midi_pitchbend) (void* info, int time, short pitchbend),
-	int (*midi_mainvolume) (void* info, int time, unsigned char volume),
-	int (*midi_programchange) (void* info, int time, unsigned char program),
-	float samplerate, float filter_min_freq, float filter_max_freq, float gain, float seconds_maxdelay, float out_freq_max_change, float ampl_noteon);
+	int (*midi_pitchbend)(void* info, int time, short pitchbend),
+	int (*midi_mainvolume)(void* info, int time, unsigned char volume),
+	int (*midi_programchange)(void* info, int time, unsigned char program),
+	float samplerate, float filter_min_freq, float filter_max_freq, float gain, float seconds_maxdelay, float notechange_mindelay, float out_freq_max_change, float ampl_noteon);
+
 void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, float* buffer, void* midi_player_info);
 

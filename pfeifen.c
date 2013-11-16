@@ -222,7 +222,7 @@ int main() {
 	int (*midi_mainvolume) (void* info, int time, unsigned char volume) = &jack_midi_mainvolume;
 	int (*midi_programchange) (void* info, int time, unsigned char program) = &jack_midi_programchange;
 	
-	converter = audio_midi_converter_init(midi_note_on, midi_note_off, midi_pitchbend, midi_mainvolume, midi_programchange, jack_sample_rate, 450.0, 2500.0, 4800.0, 0.005, 50.0, 0.01);
+	converter = audio_midi_converter_init(midi_note_on, midi_note_off, midi_pitchbend, midi_mainvolume, midi_programchange, jack_sample_rate, 450.0, 2500.0, 4800.0, 0.005, 0.05, 50.0, 0.01);
 	
 	jack_audio_in_port = jack_port_register(jack_client, "input", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
 	if (jack_audio_in_port == NULL) {perror("jack_port_register audio port\n"); exit(1);}
