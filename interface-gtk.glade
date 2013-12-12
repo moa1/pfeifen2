@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <object class="GtkAdjustment" id="adjustment_ampl_noteon">
+    <property name="upper">100</property>
+    <property name="value">0.0001</property>
+    <property name="step_increment">0.10000000000000001</property>
+    <property name="page_increment">1</property>
+  </object>
+  <object class="GtkAdjustment" id="adjustment_midi_pitchbend_range">
+    <property name="lower">0.5</property>
+    <property name="upper">12</property>
+    <property name="value">0.5</property>
+    <property name="step_increment">0.5</property>
+    <property name="page_increment">5</property>
+  </object>
+  <object class="GtkAdjustment" id="adjustment_notechange_mindelay">
+    <property name="upper">1000</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkWindow" id="window">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">mic2midi2</property>
+    <child>
+      <object class="GtkPaned" id="paned1">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <child>
+          <object class="GtkDrawingArea" id="drawingarea_waveform">
+            <property name="width_request">100</property>
+            <property name="height_request">100</property>
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+          </object>
+          <packing>
+            <property name="resize">True</property>
+            <property name="shrink">False</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkGrid" id="grid1">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkLabel" id="label1">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="xalign">0.40000000596046448</property>
+                <property name="ypad">1</property>
+                <property name="label" translatable="yes">Note On amplitude (%):</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">0</property>
+                <property name="width">1</property>
+                <property name="height">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSpinButton" id="spinbutton_ampl_noteon">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
+                <property name="invisible_char">●</property>
+                <property name="input_purpose">number</property>
+                <property name="adjustment">adjustment_ampl_noteon</property>
+                <property name="digits">2</property>
+                <property name="numeric">True</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">0</property>
+                <property name="width">1</property>
+                <property name="height">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="label2">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Minimum delay
+between notes (ms):</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">1</property>
+                <property name="width">1</property>
+                <property name="height">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSpinButton" id="spinbutton_notechange_mindelay">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
+                <property name="invisible_char">●</property>
+                <property name="input_purpose">number</property>
+                <property name="adjustment">adjustment_notechange_mindelay</property>
+                <property name="digits">2</property>
+                <property name="numeric">True</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">1</property>
+                <property name="width">1</property>
+                <property name="height">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="label3">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">MIDI program:</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">3</property>
+                <property name="width">1</property>
+                <property name="height">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="label4">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">MIDI Pitchbend range:</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">2</property>
+                <property name="width">1</property>
+                <property name="height">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSpinButton" id="spinbutton_midi_pitchbend_range">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
+                <property name="invisible_char">●</property>
+                <property name="adjustment">adjustment_midi_pitchbend_range</property>
+                <property name="digits">1</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">2</property>
+                <property name="width">1</property>
+                <property name="height">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBox" id="combobox_midi_program">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="hexpand">True</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">3</property>
+                <property name="width">1</property>
+                <property name="height">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="resize">False</property>
+            <property name="shrink">False</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
