@@ -13,14 +13,14 @@ float window_max(int windowlen, float* window) {
 	return max;
 }
 
-
-
+/*
 writer_filter* debug_input_raw;
 writer_filter* debug_input;
 writer_filter* debug_ampl;
 writer_filter* debug_freq_raw;
 writer_filter* debug_freq_filtered;
 writer_filter* debug_note;
+*/
 
 audio_midi_converter* audio_midi_converter_init(
 	int (*midi_note_on) (void* info, int time, unsigned char pitch, unsigned char velocity),
@@ -31,14 +31,13 @@ audio_midi_converter* audio_midi_converter_init(
 	float samplerate, float filter_min_freq, float filter_max_freq, float gain, float seconds_maxdelay, float notechange_mindelay, float out_freq_max_change, float ampl_noteon)
 {
 
-
-	debug_input_raw = writer_filter_init("/tmp/debug_input_raw.raw");
+/*	debug_input_raw = writer_filter_init("/tmp/debug_input_raw.raw");
 	debug_input = writer_filter_init("/tmp/debug_input.raw");
 	debug_ampl = writer_filter_init("/tmp/debug_ampl.raw");
 	debug_freq_raw = writer_filter_init("/tmp/debug_freq.raw");
 	debug_freq_filtered = writer_filter_init("/tmp/debug_freq_filtered.raw");;
 	debug_note = writer_filter_init("/tmp/debug_note.raw");;
-
+*/
 
 	audio_midi_converter* c = malloc(sizeof(audio_midi_converter));
 	

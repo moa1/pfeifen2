@@ -44,7 +44,9 @@ Note Off when whistling stops.
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #include "converter.h"
+#include "interface.h"
 
 jack_client_t *jack_client = NULL;
 jack_nframes_t jack_sample_rate = 0;
@@ -53,6 +55,7 @@ jack_port_t *jack_audio_in_port = NULL;
 jack_port_t *jack_midi_out_port = NULL;
 
 audio_midi_converter* converter = NULL;
+int audio_processing = 0;
 
 typedef struct jack_midi_event_info_t {
 	void *port_buffer;
@@ -70,12 +73,16 @@ int jack_init() {
 int jack_process_callback(jack_nframes_t nframes, void *arg) {
 	//printf("jack_process_callback nframes:%i\n", nframes);
 	if (jack_audio_in_port && jack_midi_out_port) {
+		audio_processing = 1;
+
 		jack_default_audio_sample_t *audio_buf = jack_port_get_buffer(jack_audio_in_port, nframes);
 		unsigned char *midi_out_buf = jack_port_get_buffer(jack_midi_out_port, nframes);
 		jack_midi_clear_buffer(midi_out_buf);
 		jack_midi_event_info info;
 		info.port_buffer = midi_out_buf;
 		audio_midi_converter_process(converter, nframes, audio_buf, &info);
+
+		audio_processing = 0;
 	}
 	return 0;
 }
@@ -204,6 +211,18 @@ int jack_midi_programchange(void* info, int time, unsigned char program) {
 	return jack_midi_event_write(i->port_buffer, time, buffer, 2);
 }
 
+int parameters_change(void* info, float ampl_noteon, float notechange_mindelay, float pitchbend_abs_range_in_half_notes, int midi_program) {
+	// TODO: add a mutex that prevents audio_midi_converter_process from being called while we change converter parameters. And add waiting until audio_midi_converter_process is finished if it's running at the beginning of parameters_change.
+	// TODO: replace this with a mutex or lock or whatever.
+	while(audio_processing == 1) {};
+
+	audio_midi_converter* converter = (audio_midi_converter*) info;
+	converter->ampl_noteon = ampl_noteon;
+	converter->notechange_mindelay = notechange_mindelay;
+	converter->pitchbend_abs_range_in_half_notes = pitchbend_abs_range_in_half_notes;
+	converter->midi_program = midi_program;
+}
+
 int main() {
 	if (jack_init()) {
 		perror("jack_init");
@@ -213,36 +232,49 @@ int main() {
 		perror("jack_setup_and_activate");
 		exit(1);
 	}
-	
+
 	printf("jack_sample_rate:%i jack_buffer_size:%i\n", jack_sample_rate, jack_buffer_size);
-	
+
 	int (*midi_note_on) (void* info, int time, unsigned char pitch, unsigned char velocity) = &jack_midi_note_on;
 	int (*midi_note_off) (void* info, int time, unsigned char pitch) = &jack_midi_note_off;
 	int (*midi_pitchbend) (void* info, int time, short pitchbend) = &jack_midi_pitchbend;
 	int (*midi_mainvolume) (void* info, int time, unsigned char volume) = &jack_midi_mainvolume;
 	int (*midi_programchange) (void* info, int time, unsigned char program) = &jack_midi_programchange;
-	
+
 	converter = audio_midi_converter_init(midi_note_on, midi_note_off, midi_pitchbend, midi_mainvolume, midi_programchange, jack_sample_rate, 450.0, 2500.0, 4800.0, 0.005, 0.05, 50.0, 0.01);
-	
+
+	interface* interf = interface_init(parameters_change, converter, 0.01, 0.05, 1, 71);
+	if (interf == NULL) {
+		perror("Could not initialize interface!");
+		exit(1);
+	}
+
 	jack_audio_in_port = jack_port_register(jack_client, "input", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
 	if (jack_audio_in_port == NULL) {perror("jack_port_register audio port\n"); exit(1);}
 
 	jack_midi_out_port = jack_port_register(jack_client, "output", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 	if (jack_midi_out_port == NULL) {perror("jack_port_register midi port\n"); exit(1);}
 
-	while(1) {
-		//jack_nframes_t nframes;
-		//nframes = jack_cycle_wait(jack_client);
-		//printf("jack_cycle_wait nframes:%i\n", nframes);
-		sleep(1);
+/*	while(1) {
+		struct timespec t;
+		t.tv_sec = 0;
+		t.tv_nsec = (int) (0.01 * 1000000000);
+		nanosleep(&t, NULL);
+
+		if (interface_process() == 0) {
+			break;
+		}
 	}
+*/
+	interface_process();
 	
 	int ret;
-	ret = jack_port_unregister (jack_client, jack_audio_in_port);
-	if (!ret) {perror("jack_port_unregister");exit(1);}
-	ret = jack_port_unregister (jack_client, jack_midi_out_port);
-	if (!ret) {perror("jack_port_unregister");exit(1);}
+	ret = jack_port_unregister(jack_client, jack_audio_in_port);
+	if (!ret) {perror("jack_port_unregister error");exit(1);}
+	ret = jack_port_unregister(jack_client, jack_midi_out_port);
+	if (!ret) {perror("jack_port_unregister error");exit(1);}
 	
+	// interface_free(interf);
 	// converter_free(converter);
 	
 	jack_close();
