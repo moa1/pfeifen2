@@ -1,5 +1,8 @@
 // filters.h
 
+#ifndef PFEIFEN2_FILTERS_H
+#define PFEIFEN2_FILTERS_H
+
 typedef struct lowpass_rc_filter_t {
 	float a;
 	float b;
@@ -69,3 +72,4 @@ typedef struct writer_filter_t {
 writer_filter* writer_filter_init(const char* filename);
 float writer_filter_next(writer_filter* f, float x);
 
+#endif//PFEIFEN2_FILTERS_H

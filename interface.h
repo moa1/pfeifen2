@@ -1,3 +1,5 @@
+#ifndef PFEIFEN2_INTERFACE_H
+#define PFEIFEN2_INTERFACE_H
 
 typedef struct interface_t {
 	int (*parameters_change)(void* data, float ampl_noteon, float notechange_mindelay, float pitchbend_abs_range_in_half_notes, int midi_program);
@@ -18,3 +20,4 @@ interface* interface_init(
 	);
 int interface_process();
 
+#endif//PFEIFEN2_INTERFACE_H

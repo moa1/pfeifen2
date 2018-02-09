@@ -5,6 +5,10 @@
 #include <math.h>
 #include "converter.h"
 
+
+audio_midi_converter* converter = NULL;
+
+
 float window_max(int windowlen, float* window) {
 	float max = window[0];
 	for (int i=1; i<windowlen; i++)
