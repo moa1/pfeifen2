@@ -8,22 +8,32 @@ typedef struct jack_midi_event_info_t {
 } jack_midi_event_info;
 
 
+char *jack_device_name = NULL;
 jack_client_t *jack_client = NULL;
 int* jack_sample_rate = NULL;
 jack_nframes_t jack_buffer_size = 0;
 jack_port_t *jack_audio_in_port = NULL;
 jack_port_t *jack_midi_out_port = NULL;
 
-int jack_init() {
+int jack_init(const char* device_name, int bufsize) {
 	jack_status_t status;
 	jack_client = jack_client_open("pfeifen", JackNullOption, &status);
 	status = status & !JackServerStarted;
 	printf("status without JackServerStarted:%i\n", status);
 	// TODO: Interpret and output status errors (see jack/types.h).
+
+/*	if ((device_name = malloc(sizeof(char) * strlen(device_name)+1)) == NULL) {
+		fprintf("malloc\n");
+		return 1;
+	}
+	strcpy(jack_device_name, device_name);*/
+	
 	return status;
 }
 
-int jack_process_callback(jack_nframes_t nframes, void *arg) {
+int jack_process_callback(unsigned int nframes_int, void *arg) {
+	jack_nframes_t nframes = nframes_int;
+
 	//printf("jack_process_callback nframes:%i\n", nframes);
 	if (jack_audio_in_port && jack_midi_out_port) {
 		audio_processing = 1;
@@ -37,6 +47,11 @@ int jack_process_callback(jack_nframes_t nframes, void *arg) {
 
 		audio_processing = 0;
 	}
+	return 0;
+}
+
+int jack_process_callback_nothing() {
+	// this function is only needed for the interface.
 	return 0;
 }
 
@@ -63,13 +78,13 @@ int jack_setup(int *sample_rate) {
 	ret = jack_set_process_callback(jack_client, &jack_process_callback, NULL);
 	if (ret) {perror("jack_set_process_callback"); exit(1);}
 	
-	ret = jack_set_buffer_size_callback(jack_client, &jack_buffer_size_callback, NULL);
+/*	ret = jack_set_buffer_size_callback(jack_client, &jack_buffer_size_callback, NULL);
 	if (ret) {perror("jack_set_buffer_size_callback"); exit(1);}
 
 	jack_sample_rate = sample_rate;
 	*sample_rate = jack_get_sample_rate(jack_client);
 	ret = jack_set_sample_rate_callback (jack_client, &jack_sample_rate_callback, NULL);
-	if (ret) {perror("jack_set_sample_rate_callback"); exit(1);}
+	if (ret) {perror("jack_set_sample_rate_callback"); exit(1);}*/
 
 	/*
 	do we need a latency callback?
@@ -97,6 +112,8 @@ int jack_start() {
 
 	jack_midi_out_port = jack_port_register(jack_client, "output", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 	if (jack_midi_out_port == NULL) {perror("jack_port_register midi port\n"); exit(1);}
+
+	return 0;
 }
 
 int jack_close() {

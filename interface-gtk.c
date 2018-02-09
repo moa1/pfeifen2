@@ -1,3 +1,5 @@
+// NOTE that this interface doesn't work anymore, since we have a main loop, but this file needs `gtk_main`.
+
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <stdlib.h>

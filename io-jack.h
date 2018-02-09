@@ -11,13 +11,11 @@ extern jack_nframes_t jack_buffer_size;
 extern jack_port_t *jack_audio_in_port;
 extern jack_port_t *jack_midi_out_port;
 
-int jack_init();
+int jack_init(const char* device_name, int bufsize);
 int jack_setup(int *sample_rate);
 int jack_start();
-int jack_process_callback(jack_nframes_t nframes, void *arg);
-int jack_buffer_size_callback(jack_nframes_t nframes, void *arg);
-int jack_sample_rate_callback(jack_nframes_t nframes, void *arg);
-void jack_shutdown_callback(void* arg);
+int jack_process_callback(unsigned int nframes, void *arg);
+int jack_process_callback_nothing();
 int jack_close();
 int jack_midi_note_on(void* info, int time, unsigned char pitch, unsigned char velocity);
 int jack_midi_note_off(void* info, int time, unsigned char pitch);

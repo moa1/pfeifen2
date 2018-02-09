@@ -9,8 +9,8 @@ clean:
 midi_in_decode: midi_in_decode.c
 	gcc -g `pkg-config --libs --cflags jack` --std=c99 -o midi_in_decode midi_in_decode.c
 
-pfeifen: pfeifen.c filters.c filters.h converter.c converter.h interface.h interface-gtk.c interface-gtk.glade io-jack.c io-jack.h
-	gcc -g -lm `pkg-config --libs --cflags jack` `pkg-config --cflags --libs gtk+-3.0` --std=gnu99 -o pfeifen filters.c converter.c interface-gtk.c io-jack.c pfeifen.c
+pfeifen: pfeifen.c filters.c filters.h converter.c converter.h interface.h interface-none.c io-jack.c io-jack.h io-alsa.c io-alsa.h
+	gcc -g -lm `pkg-config --libs --cflags jack` `pkg-config --libs --cflags alsa` `pkg-config --cflags --libs gtk+-3.0` --std=gnu99 -o pfeifen filters.c converter.c interface-none.c io-jack.c io-alsa.c pfeifen.c
 
 run-jack: pfeifen
 # set --period to a high value so that fluidsynth has enough time to process.

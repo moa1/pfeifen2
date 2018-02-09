@@ -1,3 +1,214 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <time.h>
+#include "converter.h"
+#include "interface.h"
+#include "io-jack.h"
+#include "io-alsa.h"
+
+int audio_processing = 0;
+
+int parameters_change(void* info, float ampl_noteon, float notechange_mindelay, float pitchbend_abs_range_in_half_notes, int midi_program) {
+	// TODO: add a mutex that prevents audio_midi_converter_process from being called while we change converter parameters. And add waiting until audio_midi_converter_process is finished if it's running at the beginning of parameters_change.
+	// TODO: replace this with a mutex or lock or whatever.
+	while(audio_processing == 1) {};
+
+	audio_midi_converter* converter = (audio_midi_converter*) info;
+	converter->ampl_noteon = ampl_noteon;
+	converter->notechange_mindelay = notechange_mindelay;
+	converter->pitchbend_abs_range_in_half_notes = pitchbend_abs_range_in_half_notes;
+	converter->midi_program = midi_program;
+}
+
+typedef enum sound_io_enum {
+	sound_io_alsa = 0,
+	sound_io_jack,
+} sound_io;
+
+int main(int argc, char** argv) {
+	const sound_io default_sound_io = sound_io_alsa;
+	const char* default_device_name = "hw"; 
+	const int default_bufsize = 1024;
+	const int default_sample_rate = 48000;
+	const float default_filter_min_freq = 450.0;
+	const float default_filter_max_freq = 2500.0;
+	const float default_gain = 4800.0;
+	const float default_seconds_maxdelay = 0.005;
+	const float default_notechange_mindelay = 0.05;
+	const float default_out_freq_max_change = 50.0;
+	const float default_ampl_noteon = 0.01;
+
+	sound_io sound_io = default_sound_io;
+	const char* device_name = default_device_name;
+	int bufsize = default_bufsize;
+	int sample_rate = default_sample_rate;
+	float filter_min_freq = default_filter_min_freq;
+	float filter_max_freq = default_filter_max_freq;
+	float gain = default_gain;
+	float seconds_maxdelay = default_seconds_maxdelay;
+	float notechange_mindelay = default_notechange_mindelay;
+	float out_freq_max_change = default_out_freq_max_change;
+	float ampl_noteon = default_ampl_noteon;
+
+	for (int i = 1; i < argc; i++) {
+		void show_error(const char* argname, const char* argtype) {
+			fprintf(stderr, "%s [OPTIONS]\n", argv[0]);
+			fprintf(stderr, "Options:\n");
+			fprintf(stderr, "--alsa  Use ALSA for sound input and MIDI output (default)\n");
+			fprintf(stderr, "--jack  Use JACK for sound input and MIDI output\n");
+			fprintf(stderr, "--device  ALSA capture device name (default: %s)\n", default_device_name);
+			fprintf(stderr, "--bufsize  ALSA buffer size (the larger, the longer the latency, default: %i)\n", default_bufsize);
+			fprintf(stderr, "--rate  ALSA capture device sample rate (default: %i)\n", default_sample_rate);
+			fprintf(stderr, "--min-freq  highpass filter frequency (default: %.3f)\n", default_filter_min_freq);
+			fprintf(stderr, "--max-freq  lowpass filter frequency (default: %.3f)\n", default_filter_max_freq);
+			fprintf(stderr, "--gain  amplification gain (default: %.3f)\n", default_gain);
+			fprintf(stderr, "--max-delay  ?maximum delay when a note is played? (default: %.3f)\n", default_seconds_maxdelay);
+			fprintf(stderr, "--min-delay  minimal note length (default: %.3f)\n", default_notechange_mindelay);
+			fprintf(stderr, "--max-change  maximal detected played notes per second (default: %.3f)\n", default_out_freq_max_change);
+			fprintf(stderr, "--ampl  amplitude threshold required for a note to be played (default: %.3f)\n", default_ampl_noteon);
+			if (argname) {
+				fprintf(stderr, "\n");
+				fprintf(stderr, "%s needs a %s as argument\n", argname, argtype);
+			}
+			exit(1);
+		}
+		int read_positive_int(const char* argname) {
+			if (++i >= argc) show_error(argname, "positive int");
+			char *endptr;
+			int i = strtol(argv[i], &endptr, 10);
+			if (*endptr != '\0') show_error(argname, "positive int");
+			printf("Setting %s to %i\n", &argname[2], i);
+			return i;
+		}
+		float read_positive_float(const char* argname) {
+			if (++i >= argc) show_error(argname, "positive float");
+			char *endptr;
+			float f = strtof(argv[i], &endptr);
+			if (*endptr != '\0') show_error(argname, "positive float");
+			printf("Setting %s to %.3f\n", &argname[2], i);
+			return f;
+		}
+
+		char* a = argv[i];
+		if (strcmp(a, "--help") == 0) {
+			show_error(NULL, 0);
+		} else if(strcmp(a, "--alsa") == 0) {
+			sound_io = sound_io_alsa;
+		} else if (strcmp(a, "--jack") == 0) {
+			sound_io = sound_io_jack;
+		} else if (strcmp(a, "--device") == 0) { //only used for ALSA
+			i++;
+			if (i >= argc) show_error("--device", "string");
+			device_name = argv[i];
+		} else if (strcmp(a, "--bufsize") == 0) { //only used for ALSA
+			bufsize = read_positive_int(a);
+		} else if (strcmp(a, "--rate") == 0) { //only used for ALSA
+			sample_rate = read_positive_int(a);
+		} else if (strcmp(a, "--min-freq") == 0) {
+			filter_min_freq = read_positive_float(a);
+		} else if (strcmp(a, "--max-freq") == 0) {
+			filter_max_freq = read_positive_float(a);
+		} else if (strcmp(a, "--gain") == 0) {
+			gain = read_positive_float(a);
+		} else if (strcmp(a, "--max-delay") == 0) {
+			seconds_maxdelay = read_positive_float(a);
+		} else if (strcmp(a, "--min-delay") == 0) {
+		    notechange_mindelay = read_positive_float(a);
+		} else if (strcmp(a, "--max-change") == 0) {
+		    notechange_mindelay = read_positive_float(a);
+		} else if (strcmp(a, "--ampl") == 0) {
+		    ampl_noteon = read_positive_float(a);
+		} else {
+			fprintf(stderr, "unknown parameter %s\n", a);
+			return 1;
+		}
+	}
+
+	int (*io_init)(const char* device_name, int bufsize);
+	int (*io_setup)(int *sample_rate);
+	int (*io_start)();
+	int (*io_close)();
+	int (*midi_note_on)(void* info, int time, unsigned char pitch, unsigned char velocity);
+	int (*midi_note_off)(void* info, int time, unsigned char pitch);
+	int (*midi_pitchbend)(void* info, int time, short pitchbend);
+	int (*midi_mainvolume)(void* info, int time, unsigned char volume);
+	int (*midi_programchange)(void* info, int time, unsigned char program);
+	int (*io_process_callback)();
+
+	if (sound_io == sound_io_alsa) {
+		io_init = &alsa_init;
+		io_setup = &alsa_setup;
+		io_start = &alsa_start;
+		io_close = &alsa_close;
+		midi_note_on = &alsa_midi_note_on;
+		midi_note_off = &alsa_midi_note_off;
+		midi_pitchbend = &alsa_midi_pitchbend;
+		midi_mainvolume = &alsa_midi_mainvolume;
+		midi_programchange = &alsa_midi_programchange;
+		io_process_callback = &alsa_process_callback;
+		printf("Using ALSA\n");
+	} else if (sound_io == sound_io_jack) {
+		io_init = &jack_init;
+		io_setup = &jack_setup;
+		io_start = &jack_start;
+		io_close = &jack_close;
+		midi_note_on = &jack_midi_note_on;
+		midi_note_off = &jack_midi_note_off;
+		midi_pitchbend = &jack_midi_pitchbend;
+		midi_mainvolume = &jack_midi_mainvolume;
+		midi_programchange = &jack_midi_programchange;
+		io_process_callback = &jack_process_callback_nothing;
+		printf("Using JACK\n");
+	}
+
+	// end of parameter parsing and initializing, start of real program
+	
+	if ((io_init)(device_name, bufsize)) {
+		fprintf(stderr, "io_init failed\n");
+		return 1;
+	}
+	if ((io_setup)(&sample_rate)) {
+		fprintf(stderr, "io_setup error\n");
+		return 1;
+	}
+	printf("sample_rate = %i\n", sample_rate);
+
+	converter = audio_midi_converter_init(midi_note_on, midi_note_off, midi_pitchbend, midi_mainvolume, midi_programchange, (float)sample_rate, filter_min_freq, filter_max_freq, gain, seconds_maxdelay, notechange_mindelay, out_freq_max_change, ampl_noteon);
+
+	if ((*io_start)()) {
+		fprintf(stderr, "io_start error\n");
+		return 1;
+	}
+	
+	interface* interf = interface_init(parameters_change, converter, 0.01, 0.05, 1, 71);
+	if (interf == NULL) {
+		perror("Could not initialize interface!");
+		return 1;
+	}
+
+	while(1) {
+		if ((*io_process_callback)()) {
+			fprintf(stderr, "io_process_callback error\n");
+			return 1;
+		}
+
+		if (interface_process()) {
+			fprintf(stderr, "interface_process error\n");
+			return 1;
+		}
+	}
+
+	// TODO: free
+	// interface_free(interf);
+	// converter_free(converter);
+	
+	(*io_close)();
+
+	return 0;
+}
+
+
 /*
 jack-keyboard press individual keys:
 time:125 size:3 buffer[0]:144 buffer[1]:90 buffer[2]:74 	note90 at velocity 74
@@ -38,77 +249,3 @@ while whisling goes on:
 	set Pitchwheel according to whistling pitch.
 Note Off when whistling stops.
 */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <time.h>
-#include "converter.h"
-#include "interface.h"
-#include "io-jack.h"
-
-int audio_processing = 0;
-int sample_rate; //the sampling rate, set by io_init
-
-int parameters_change(void* info, float ampl_noteon, float notechange_mindelay, float pitchbend_abs_range_in_half_notes, int midi_program) {
-	// TODO: add a mutex that prevents audio_midi_converter_process from being called while we change converter parameters. And add waiting until audio_midi_converter_process is finished if it's running at the beginning of parameters_change.
-	// TODO: replace this with a mutex or lock or whatever.
-	while(audio_processing == 1) {};
-
-	audio_midi_converter* converter = (audio_midi_converter*) info;
-	converter->ampl_noteon = ampl_noteon;
-	converter->notechange_mindelay = notechange_mindelay;
-	converter->pitchbend_abs_range_in_half_notes = pitchbend_abs_range_in_half_notes;
-	converter->midi_program = midi_program;
-}
-
-int main() {
-
-	int (*io_init) () = &jack_init;
-	int (*io_setup_and_activate) (int *sample_rate) = &jack_setup;
-	int (*io_start) () = &jack_start;
-	int (*io_close) () = &jack_close;
-	int (*midi_note_on) (void* info, int time, unsigned char pitch, unsigned char velocity) = &jack_midi_note_on;
-	int (*midi_note_off) (void* info, int time, unsigned char pitch) = &jack_midi_note_off;
-	int (*midi_pitchbend) (void* info, int time, short pitchbend) = &jack_midi_pitchbend;
-	int (*midi_mainvolume) (void* info, int time, unsigned char volume) = &jack_midi_mainvolume;
-	int (*midi_programchange) (void* info, int time, unsigned char program) = &jack_midi_programchange;
-
-	if ((io_init)()) {
-		perror("io_init");
-		exit(1);
-	}
-	if ((io_setup_and_activate)(&sample_rate)) {
-		perror("io_setup_and_activate");
-		exit(1);
-	}
-
-	converter = audio_midi_converter_init(midi_note_on, midi_note_off, midi_pitchbend, midi_mainvolume, midi_programchange, sample_rate, 450.0, 2500.0, 4800.0, 0.005, 0.05, 50.0, 0.01);
-
-	(*io_start)();
-	
-	interface* interf = interface_init(parameters_change, converter, 0.01, 0.05, 1, 71);
-	if (interf == NULL) {
-		perror("Could not initialize interface!");
-		exit(1);
-	}
-
-/*	while(1) {
-		struct timespec t;
-		t.tv_sec = 0;
-		t.tv_nsec = (int) (0.01 * 1000000000);
-		nanosleep(&t, NULL);
-
-		if (interface_process() == 0) {
-			break;
-		}
-	}
-*/
-	interface_process();
-	
-	// interface_free(interf);
-	// converter_free(converter);
-	
-	(*io_close)();
-}
-
