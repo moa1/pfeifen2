@@ -17,14 +17,34 @@ float window_max(int windowlen, float* window) {
 	return max;
 }
 
-/*
+#ifdef DEBUG_CONVERTER
 writer_filter* debug_input_raw;
 writer_filter* debug_input;
 writer_filter* debug_ampl;
 writer_filter* debug_freq_raw;
 writer_filter* debug_freq_filtered;
 writer_filter* debug_note;
-*/
+#endif
+
+#ifdef PRINTD
+#include <stdarg.h>
+void printd(const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+/*	void format_string(const char* fmt, va_list argptr, char* string);
+	char string[1024];
+	va_list args;
+	va_start(args, fmt);
+	format_string(fmt, args, string);
+	va_end(args);
+	fprintf(stdout, "%s", string);*/
+}
+#else
+void printd(const char* fmt, ...) {
+}
+#endif
 
 audio_midi_converter* audio_midi_converter_init(
 	int (*midi_note_on) (void* info, int time, unsigned char pitch, unsigned char velocity),
@@ -35,13 +55,14 @@ audio_midi_converter* audio_midi_converter_init(
 	float samplerate, float filter_min_freq, float filter_max_freq, float gain, float seconds_maxdelay, float notechange_mindelay, float out_freq_max_change, float ampl_noteon)
 {
 
-/*	debug_input_raw = writer_filter_init("/tmp/debug_input_raw.raw");
+#ifdef DEBUG_CONVERTER
+	debug_input_raw = writer_filter_init("/tmp/debug_input_raw.raw");
 	debug_input = writer_filter_init("/tmp/debug_input.raw");
 	debug_ampl = writer_filter_init("/tmp/debug_ampl.raw");
 	debug_freq_raw = writer_filter_init("/tmp/debug_freq.raw");
 	debug_freq_filtered = writer_filter_init("/tmp/debug_freq_filtered.raw");;
 	debug_note = writer_filter_init("/tmp/debug_note.raw");;
-*/
+#endif
 
 	audio_midi_converter* c = malloc(sizeof(audio_midi_converter));
 	
@@ -167,14 +188,14 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 			c->last_note_velocity = 63; //TODO: ampl derivative is velocity
 			c->last_note_volume = (int)(amplmax / 0.15 * 127);
 			
-			printf("NOTE ON. amplmax=%f freq=%f pitch:%i pitchbend=%i\n", amplmax, freq, pitch, pitchbend);
+			printd("NOTE ON. amplmax=%f freq=%f pitch:%i pitchbend=%i\n", amplmax, freq, pitch, pitchbend);
 			
 			//(c->midi_programchange)(midi_player_info, i, c->midi_program);
 			(c->midi_note_on)(midi_player_info, i, c->last_note_pitch, c->last_note_velocity);
 			(c->midi_pitchbend)(midi_player_info, i, c->last_note_pitchbend);
 			//(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
 		} else if (c->ampl_last >= c->ampl_noteon && amplmax < c->ampl_noteon && c->note_on==1 && c->last_note_duration >= c->notechange_mindelay) {
-			printf("NOTE OFF. amplmax=%f pitch:%i\n", amplmax, c->last_note_pitch);
+			printd("NOTE OFF. amplmax=%f pitch:%i\n", amplmax, c->last_note_pitch);
 			(c->midi_note_off)(midi_player_info, i, c->last_note_pitch);
 			
 			c->note_on = 0;
@@ -190,13 +211,13 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 			
 			if (pitchbend >= -8192 && pitchbend <= 8191) {
 				if (abs(pitchbend - c->last_note_pitchbend) > 200) {
-					printf("Pitchbend change. freq=%f pitch:%i\n", freq, pitchbend);
+					printd("Pitchbend change. freq=%f pitch:%i\n", freq, pitchbend);
 					c->last_note_pitchbend = pitchbend;
 					(c->midi_pitchbend)(midi_player_info, i, c->last_note_pitchbend);
 					c->last_note_duration = 0;
 				}
 			} else {
-				printf("NOTE CHANGE (NOTE OFF for now). pitch=%i\n", c->last_note_pitch);
+				printd("NOTE CHANGE (NOTE OFF for now). pitch=%i\n", c->last_note_pitch);
 				(c->midi_note_off)(midi_player_info, i, c->last_note_pitch);
 				// allow note on in the next frame.
 				amplmax = 0.0;
@@ -204,7 +225,7 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 				c->last_note_duration = 0;
 			}
 			if (abs(volume - c->last_note_volume) > 10) {
-				printf("Volume change. amplmax=%f\n", amplmax);
+				printd("Volume change. amplmax=%f\n", amplmax);
 				c->last_note_volume = volume;
 				//(c->midi_mainvolume)(midi_player_info, i, c->last_note_volume);
 				c->last_note_duration = 0;
@@ -221,12 +242,14 @@ void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, floa
 		c->ampl_last = amplmax;
 		c->last_note_duration++;
 	}
-/*	write(debug_input_raw->handle, buffer_input_raw, sizeof(float)*buffer_size);
+
+#ifdef DEBUG_CONVERTER
+	write(debug_input_raw->handle, buffer_input_raw, sizeof(float)*buffer_size);
 	write(debug_input->handle, buffer_input, sizeof(float)*buffer_size);
 	write(debug_ampl->handle, buffer_ampl, sizeof(float)*buffer_size);
 	write(debug_freq_raw->handle, buffer_freq_raw, sizeof(float)*buffer_size);
 	write(debug_freq_filtered->handle, buffer_freq_filtered, sizeof(float)*buffer_size);
 	write(debug_note->handle, buffer_note, sizeof(float)*buffer_size);
-*/
+#endif
 }
 
