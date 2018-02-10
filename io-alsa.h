@@ -5,7 +5,7 @@
 
 int alsa_init(const char* device_name, int bufsize);
 int alsa_setup(int *sample_rate);
-int alsa_start();
+int alsa_start(int syn_client1, int syn_port1, audio_midi_converter* converter);
 int alsa_process_callback();
 int alsa_close();
 int alsa_midi_note_on(void* info, int time, unsigned char pitch, unsigned char velocity);

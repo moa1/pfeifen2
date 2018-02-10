@@ -14,6 +14,8 @@ int* jack_sample_rate = NULL;
 jack_nframes_t jack_buffer_size = 0;
 jack_port_t *jack_audio_in_port = NULL;
 jack_port_t *jack_midi_out_port = NULL;
+audio_midi_converter* jack_converter = NULL;
+
 
 int jack_init(const char* device_name, int bufsize) {
 	jack_status_t status;
@@ -43,7 +45,7 @@ int jack_process_callback(unsigned int nframes_int, void *arg) {
 		jack_midi_clear_buffer(midi_out_buf);
 		jack_midi_event_info info;
 		info.port_buffer = midi_out_buf;
-		audio_midi_converter_process(converter, nframes, audio_buf, &info);
+		audio_midi_converter_process(jack_converter, nframes, audio_buf, &info);
 
 		audio_processing = 0;
 	}
@@ -106,7 +108,9 @@ int jack_setup(int *sample_rate) {
 	return 0;
 }
 
-int jack_start() {
+int jack_start(int syn_client1, int syn_port1, audio_midi_converter* converter) {
+	jack_converter = converter;
+	
 	jack_audio_in_port = jack_port_register(jack_client, "input", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
 	if (jack_audio_in_port == NULL) {perror("jack_port_register audio port\n"); exit(1);}
 

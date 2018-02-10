@@ -1,22 +1,24 @@
 
 CC = gcc
 
-all: pfeifen pfeifen-debug midi_in_decode
+all: midi_in_decode pfeifen pfeifen-debug
 
 clean:
-	rm -rf midi_in_decode pfeifen pfeifen-debug *.o
+	rm -rf midi_in_decode sinesynth pfeifen pfeifen-debug *.o
 
 midi_in_decode: midi_in_decode.c
 	gcc -g `pkg-config --libs --cflags jack` --std=c99 -o midi_in_decode midi_in_decode.c
 
 PFEIFEN_DEPS = pfeifen.c filters.c filters.h converter.c converter.h interface.h interface-none.c io-jack.c io-jack.h io-alsa.c io-alsa.h
 PFEIFEN_CS = filters.c converter.c interface-none.c io-jack.c io-alsa.c pfeifen.c
+CFLAGS = -g `pkg-config --cflags jack` `pkg-config --cflags alsa` --std=c99 -O2
+LFLAGS = -lm `pkg-config --libs jack` `pkg-config --libs alsa` --std=c99 -O2
 
 pfeifen: $(PFEIFEN_DEPS)
-	gcc -DPRINTD -g -lm `pkg-config --libs --cflags jack` `pkg-config --libs --cflags alsa` `pkg-config --cflags --libs gtk+-3.0` --std=gnu99 -o pfeifen $(PFEIFEN_CS)
+	gcc -DPRINTD -D_POSIX_C_SOURCE=200809L $(CFLAGS) $(LFLAGS) -o pfeifen $(PFEIFEN_CS)
 
 pfeifen-debug: $(PFEIFEN_DEPS)
-	gcc -DPRINTD -DDEBUG_CONVERTER -g -lm `pkg-config --libs --cflags jack` `pkg-config --libs --cflags alsa` `pkg-config --cflags --libs gtk+-3.0` --std=gnu99 -o pfeifen-debug $(PFEIFEN_CS)
+	gcc -DPRINTD -DDEBUG_CONVERTER -D_POSIX_C_SOURCE=200809L $(CFLAGS) $(LFLAGS) --std=gnu99 -o pfeifen-debug $(PFEIFEN_CS)
 
 .PHONY: run-jack
 

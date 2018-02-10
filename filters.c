@@ -11,9 +11,15 @@
 #include <stdio.h>
 #include "filters.h"
 
+#define M_PI 3.14159265358979
+
 // An in-place low-pass filter with cutoff frequency CUTOFF for the samples SAMPLES sampled at sample rate SAMPLERATE.
 lowpass_rc_filter* lowpass_rc_filter_init(float cutoff, float samplerate) {
 	lowpass_rc_filter* f = malloc(sizeof(lowpass_rc_filter));
+	if (f == NULL) {
+		fprintf(stderr, "malloc error\n");
+		exit(1);
+	}
 	float rc = 1.0/(cutoff*2*M_PI);
 	float dt = 1.0/samplerate;
     f->a = dt / (rc + dt);
@@ -31,6 +37,10 @@ inline float lowpass_rc_filter_next(lowpass_rc_filter* f, float x) {
 //Wikipedia "high-pass filter": y_n = alpha ( y_{n-1} + x_{n} - x_{n-1}) :where alpha = frac{RC}{RC + Delta t}
 highpass_rc_filter* highpass_rc_filter_init(float cutoff, float samplerate) {
 	highpass_rc_filter* f = malloc(sizeof(highpass_rc_filter));
+	if (f == NULL) {
+		fprintf(stderr, "malloc error\n");
+		exit(1);
+	}
 	float rc = 1.0/(cutoff*2*M_PI);
 	float dt = 1.0/samplerate;
 	f->a = rc / (rc + dt);
@@ -48,6 +58,10 @@ inline float highpass_rc_filter_next(highpass_rc_filter* f, float x) {
 
 automaticgain_filter* automaticgain_filter_init(float gain, float samplerate) {
 	automaticgain_filter* f = malloc(sizeof(automaticgain_filter));
+	if (f == NULL) {
+		fprintf(stderr, "malloc error\n");
+		exit(1);
+	}
 	f->a = 0.0;
 	f->gain = gain/samplerate;
 	return f;
@@ -70,6 +84,10 @@ float automaticgain_filter_next(automaticgain_filter* f, float x) {
 
 zerocrossingdetector_filter* zerocrossingdetector_filter_init(float samplerate) {
 	zerocrossingdetector_filter* f = malloc(sizeof(zerocrossingdetector_filter));
+	if (f == NULL) {
+		fprintf(stderr, "malloc error\n");
+		exit(1);
+	}
 	f->samplerate = samplerate;
 	f->lastx = 0.0;
 	f->lastupcrossing = 1;
@@ -93,6 +111,10 @@ float zerocrossingdetector_filter_next(zerocrossingdetector_filter* f, float x) 
 
 amplitudedetector_filter* amplitudedetector_filter_init() {
 	amplitudedetector_filter* f = malloc(sizeof(amplitudedetector_filter));
+	if (f == NULL) {
+		fprintf(stderr, "malloc error\n");
+		exit(1);
+	}
 	f->minx = 0.0;
 	f->maxx = 0.0;
 	f->dir = 1;
@@ -123,6 +145,10 @@ float amplitudedetector_filter_next(amplitudedetector_filter* f, float x) {
 
 windowfunction_filter* windowfunction_filter_init(float seconds, float samplerate, float (*function)(int, float*)) {
 	windowfunction_filter* f = malloc(sizeof(windowfunction_filter));
+	if (f == NULL) {
+		fprintf(stderr, "malloc error\n");
+		exit(1);
+	}
 	f->maxwindowlen = (int)ceil(seconds * samplerate);
 	f->windowlen = 0;
 	f->window = (float*)malloc(sizeof(float)*f->maxwindowlen);
@@ -143,6 +169,10 @@ float windowfunction_filter_next(windowfunction_filter* f, float x) {
 
 writer_filter* writer_filter_init(const char* filename) {
 	writer_filter* f = malloc(sizeof(writer_filter));
+	if (f == NULL) {
+		fprintf(stderr, "malloc error\n");
+		exit(1);
+	}
 	
 	int handle = open(filename, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
 	if (handle == -1) {

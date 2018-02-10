@@ -13,7 +13,7 @@ extern jack_port_t *jack_midi_out_port;
 
 int jack_init(const char* device_name, int bufsize);
 int jack_setup(int *sample_rate);
-int jack_start();
+int jack_start(int syn_client1, int syn_port1, audio_midi_converter* converter);
 int jack_process_callback(unsigned int nframes, void *arg);
 int jack_process_callback_nothing();
 int jack_close();

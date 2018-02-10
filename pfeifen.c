@@ -30,7 +30,9 @@ int main(int argc, char** argv) {
 	const sound_io default_sound_io = sound_io_alsa;
 	const char* default_device_name = "hw"; 
 	const int default_bufsize = 1024;
-	const int default_sample_rate = 48000;
+	const int default_sample_rate = 12000;
+	const int default_alsa_syn_client = -1;
+	const int default_alsa_syn_port = 0;
 	const float default_filter_min_freq = 450.0;
 	const float default_filter_max_freq = 2500.0;
 	const float default_gain = 4800.0;
@@ -43,6 +45,8 @@ int main(int argc, char** argv) {
 	const char* device_name = default_device_name;
 	int bufsize = default_bufsize;
 	int sample_rate = default_sample_rate;
+	int alsa_syn_client = 128;
+	int alsa_syn_port = 0;
 	float filter_min_freq = default_filter_min_freq;
 	float filter_max_freq = default_filter_max_freq;
 	float gain = default_gain;
@@ -60,6 +64,8 @@ int main(int argc, char** argv) {
 			fprintf(stderr, "--device  ALSA capture device name (default: %s)\n", default_device_name);
 			fprintf(stderr, "--bufsize  ALSA buffer size (the larger, the longer the latency, default: %i)\n", default_bufsize);
 			fprintf(stderr, "--rate  ALSA capture device sample rate (default: %i)\n", default_sample_rate);
+			fprintf(stderr, "--client  ALSA synthesizer client number, -1 means no subscription (default: %i)\n", default_alsa_syn_client);
+			fprintf(stderr, "--client-port  ALSA synthesizer client port (default: %i)\n", default_alsa_syn_port);
 			fprintf(stderr, "--min-freq  highpass filter frequency (default: %.3f)\n", default_filter_min_freq);
 			fprintf(stderr, "--max-freq  lowpass filter frequency (default: %.3f)\n", default_filter_max_freq);
 			fprintf(stderr, "--gain  amplification gain (default: %.3f)\n", default_gain);
@@ -76,10 +82,10 @@ int main(int argc, char** argv) {
 		int read_positive_int(const char* argname) {
 			if (++i >= argc) show_error(argname, "positive int");
 			char *endptr;
-			int i = strtol(argv[i], &endptr, 10);
+			int n = strtol(argv[i], &endptr, 10);
 			if (*endptr != '\0') show_error(argname, "positive int");
-			printf("Setting %s to %i\n", &argname[2], i);
-			return i;
+			printf("Setting %s to %i\n", &argname[2], n);
+			return n;
 		}
 		float read_positive_float(const char* argname) {
 			if (++i >= argc) show_error(argname, "positive float");
@@ -105,6 +111,10 @@ int main(int argc, char** argv) {
 			bufsize = read_positive_int(a);
 		} else if (strcmp(a, "--rate") == 0) { //only used for ALSA
 			sample_rate = read_positive_int(a);
+		} else if (strcmp(a, "--client") == 0) { //only used for ALSA
+			alsa_syn_client = read_positive_int(a);
+		} else if (strcmp(a, "--client-port") == 0) { //only used for ALSA
+			alsa_syn_port = read_positive_int(a);
 		} else if (strcmp(a, "--min-freq") == 0) {
 			filter_min_freq = read_positive_float(a);
 		} else if (strcmp(a, "--max-freq") == 0) {
@@ -147,7 +157,7 @@ int main(int argc, char** argv) {
 		midi_mainvolume = &alsa_midi_mainvolume;
 		midi_programchange = &alsa_midi_programchange;
 		io_process_callback = &alsa_process_callback;
-		printf("Using ALSA\n");
+		printf("Using ALSA, client=%i:%i\n", alsa_syn_client, alsa_syn_port);
 	} else if (sound_io == sound_io_jack) {
 		io_init = &jack_init;
 		io_setup = &jack_setup;
@@ -174,9 +184,13 @@ int main(int argc, char** argv) {
 	}
 	printf("sample_rate = %i\n", sample_rate);
 
-	converter = audio_midi_converter_init(midi_note_on, midi_note_off, midi_pitchbend, midi_mainvolume, midi_programchange, (float)sample_rate, filter_min_freq, filter_max_freq, gain, seconds_maxdelay, notechange_mindelay, out_freq_max_change, ampl_noteon);
+	audio_midi_converter* converter = audio_midi_converter_init(midi_note_on, midi_note_off, midi_pitchbend, midi_mainvolume, midi_programchange, (float)sample_rate, filter_min_freq, filter_max_freq, gain, seconds_maxdelay, notechange_mindelay, out_freq_max_change, ampl_noteon);
+	if (converter == NULL) {
+		fprintf(stderr, "audio_midi_converter_init error\n");
+		return 1;
+	}
 
-	if ((*io_start)()) {
+	if ((*io_start)(alsa_syn_client, alsa_syn_port, converter)) {
 		fprintf(stderr, "io_start error\n");
 		return 1;
 	}

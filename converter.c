@@ -33,13 +33,6 @@ void printd(const char* fmt, ...) {
 	va_start(args, fmt);
 	vprintf(fmt, args);
 	va_end(args);
-/*	void format_string(const char* fmt, va_list argptr, char* string);
-	char string[1024];
-	va_list args;
-	va_start(args, fmt);
-	format_string(fmt, args, string);
-	va_end(args);
-	fprintf(stdout, "%s", string);*/
 }
 #else
 void printd(const char* fmt, ...) {
@@ -64,8 +57,12 @@ audio_midi_converter* audio_midi_converter_init(
 	debug_note = writer_filter_init("/tmp/debug_note.raw");;
 #endif
 
-	audio_midi_converter* c = malloc(sizeof(audio_midi_converter));
-	
+	audio_midi_converter* c;
+	if ((c = malloc(sizeof(audio_midi_converter))) == NULL) {
+		fprintf(stderr, "malloc error\n");
+		return NULL;
+	}
+
 	c->samplerate = samplerate;
 	
 	c->ampl_high_filter_1 = highpass_rc_filter_init(filter_min_freq, samplerate);
@@ -105,6 +102,8 @@ audio_midi_converter* audio_midi_converter_init(
 	c->midi_pitchbend = midi_pitchbend;
 	c->midi_mainvolume = midi_mainvolume;
 	c->midi_programchange = midi_programchange;
+
+	return c;
 }
 
 float loghnf(float x) {

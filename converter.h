@@ -55,8 +55,6 @@ audio_midi_converter* audio_midi_converter_init(
 	int (*midi_programchange)(void* info, int time, unsigned char program),
 	float samplerate, float filter_min_freq, float filter_max_freq, float gain, float seconds_maxdelay, float notechange_mindelay, float out_freq_max_change, float ampl_noteon);
 
-extern audio_midi_converter* converter;
-
 void audio_midi_converter_process(audio_midi_converter* c, int buffer_size, float* buffer, void* midi_player_info);
 
 #endif //PFEIFEN2_CONVERTER_H
