@@ -50,39 +50,13 @@ int jack_process_callback(jack_nframes_t nframes, void *arg) {
 	return 0;
 }
 
-int jack_buffer_size_callback(jack_nframes_t nframes, void *arg) {
-	printf("jack_buffer_size_callback\n");
-	jack_buffer_size = nframes;
-	return 0;
-}
-
-int jack_sample_rate_callback(jack_nframes_t nframes, void *arg) {
-	printf("jack_sample_rate_callback\n");
-	jack_sample_rate = nframes;
-	return 0;
-}
-
 int jack_setup_and_activate() {
 	// get jack ready
 	int ret;
 	ret = jack_set_process_callback(jack_client, &jack_process_callback, NULL);
 	if (ret) {perror("jack_set_process_callback"); exit(1);}
 	
-	ret = jack_set_buffer_size_callback(jack_client, &jack_buffer_size_callback, NULL);
-	if (ret) {perror("jack_set_buffer_size_callback"); exit(1);}
-
-	ret = jack_set_sample_rate_callback (jack_client, &jack_sample_rate_callback, NULL);
-	if (ret) {perror("jack_set_sample_rate_callback"); exit(1);}
-
-	/*
-	do we need a latency callback?
-	jack.h: "More complex clients that take an input signal,"
-	int jack_set_latency_callback (jack_client_t *client,
-                               JackLatencyCallback latency_callback,
-                               void *)
-    */
-
-	// now that all the callbacks have been registered, we can activate.
+	// now that the callback has been registered, we can activate.
 	ret = jack_activate(jack_client);
 	if (ret) {perror("jack_activate"); exit(1);}
 	
