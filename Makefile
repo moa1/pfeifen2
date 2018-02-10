@@ -27,8 +27,8 @@ run-jack-start: pfeifen-debug
 	ps cax | grep fluidsynth || fluidsynth -a jack -m jack -r 48000 -i -s -j /usr/share/sounds/sf2/FluidR3_GM.sf2 &
 	./pfeifen-debug --jack &
 	sleep 2
-	jack_connect system:capture_1 pfeifen:input
-	jack_connect pfeifen:output fluidsynth:midi
+	jack_connect system:capture_1 pfeifen2:input
+	jack_connect pfeifen2:output fluidsynth:midi
 	sleep $$((60*60*24*365)) || echo -n #one year should be enough
 
 run-jack:

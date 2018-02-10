@@ -17,7 +17,7 @@ jack_port_t *jack_midi_out_port = NULL;
 
 int jack_init(const char* device_name, int bufsize) {
 	jack_status_t status;
-	jack_client = jack_client_open("pfeifen", JackNullOption, &status);
+	jack_client = jack_client_open("pfeifen2", JackNullOption, &status);
 	status = status & !JackServerStarted;
 	printf("status without JackServerStarted:%i\n", status);
 	// TODO: Interpret and output status errors (see jack/types.h).
