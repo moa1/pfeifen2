@@ -1,13 +1,16 @@
 
 CC = gcc
 
-all: midi_in_decode pfeifen pfeifen-debug
+all: midi_in_decode sinesynth pfeifen pfeifen-debug
 
 clean:
 	rm -rf midi_in_decode sinesynth pfeifen pfeifen-debug *.o
 
 midi_in_decode: midi_in_decode.c
 	gcc -g `pkg-config --libs --cflags jack` --std=c99 -o midi_in_decode midi_in_decode.c
+
+sinesynth: sinesynth.c
+	gcc -g -lm `pkg-config --libs --cflags alsa` --std=c99 -O2 -o sinesynth sinesynth.c
 
 PFEIFEN_DEPS = pfeifen.c filters.c filters.h converter.c converter.h interface.h interface-none.c io-jack.c io-jack.h io-alsa.c io-alsa.h
 PFEIFEN_CS = filters.c converter.c interface-none.c io-jack.c io-alsa.c pfeifen.c
