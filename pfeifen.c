@@ -1,3 +1,5 @@
+/* Idee: Die Interpretation des Pfeifenklangs abhängig machen von der Taste, die gerade gedrückt ist. Zum Beispiel könnte man bei keiner gedrückten Taste die pitchbend-funktion ausschalten, d.h. den analysierten Ton auf einen Halbton genau quantisieren, und bei gedrückter Taste die pitchbend-Funktion einschalten. Ebenso mit Lautstärke-Interpretation (bei einer anderen gedrückten Taste). Die Tasten sollten gleichzeitig drückbar sein. */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
