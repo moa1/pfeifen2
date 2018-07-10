@@ -123,7 +123,7 @@ interface* interface_init(
 /*
 int interface_process() {
 	while (gtk_events_pending()) {
-		if (gtk_main_iteration()) {
+		if (gtk_main_iteration_do(FALSE)) {
 			return 0;
 		}
 	}
