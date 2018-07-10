@@ -1,3 +1,5 @@
+/* Idee: In converter.c eine limitierte Fourier-Transformation machen, indem man die Frequenz, Phase und Amplitude der lautesten Sinusschwingung mittels Zero-Crossing-Zählung bestimmt, und dann vom Originalsignal eine syntetisierte Sinusschwingung mit der bestimmten Frequenze, Phase und Amplitude abzieht. Vom Differenzsignal kann man dann wieder die lauteste Sinusschwingung bestimmen, also die global gesehen zweitlauteste Sinusschwingung. Die abwechselnden Schritte Sinusschwingungsbestimmung mittels Zero-Crossing-Zählung und Differenzsignalberechnung kann man so lange wiederholen, bis die Amplitude des Signals zu klein wird, als dass sie gehört werden kann. */
+
 /* Idee: Die Interpretation des Pfeifenklangs abhängig machen von der Taste, die gerade gedrückt ist. Zum Beispiel könnte man bei keiner gedrückten Taste die pitchbend-funktion ausschalten, d.h. den analysierten Ton auf einen Halbton genau quantisieren, und bei gedrückter Taste die pitchbend-Funktion einschalten. Ebenso mit Lautstärke-Interpretation (bei einer anderen gedrückten Taste). Die Tasten sollten gleichzeitig drückbar sein. */
 
 #include <stdio.h>
