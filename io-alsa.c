@@ -24,6 +24,7 @@ float *bufarea_float;
 int alsa_init(const char* device_name, int bufsize) {
 	int e;
 
+	// check available devices using 'aplay -L'.
 	if ((e = snd_pcm_open(&pcm_handle, device_name, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
 		fprintf(stderr, "Cannot open capture audio device %s\n%s\n", device_name, snd_strerror(e));
 	    return 1;
